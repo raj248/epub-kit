@@ -1,50 +1,69 @@
 package expo.modules.epubkit
 
+import android.Manifest
+import android.os.Build
+import android.os.Environment
+import android.content.pm.PackageManager
+import android.provider.Settings
+import android.net.Uri
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import java.net.URL
+import expo.modules.kotlin.Promise
+import java.io.File
 
 class EpubKitModule : Module() {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
   override fun definition() = ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('EpubKit')` in JavaScript.
     Name("EpubKit")
 
-    // Sets constant properties on the module. Can take a dictionary or a closure that returns a dictionary.
-    Constants(
-      "PI" to Math.PI
-    )
-
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Hello world! 👋"
+    Function("getTheme") {
+      return@Function "system"
     }
 
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { value: String ->
-      // Send an event to JavaScript.
-      sendEvent("onChange", mapOf(
-        "value" to value
-      ))
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(EpubKitView::class) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { view: EpubKitView, url: URL ->
-        view.webView.loadUrl(url.toString())
+    AsyncFunction("requestStoragePermission") { promise: Promise ->
+      val activity = appContext.currentActivity ?: run {
+        promise.reject("E_NO_ACTIVITY", "No current activity",null)
+        return@AsyncFunction
       }
-      // Defines an event that the view can send to JavaScript.
-      Events("onLoad")
+
+      when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
+          if (Environment.isExternalStorageManager()) {
+            promise.resolve(true)
+          } else {
+            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+              data = Uri.parse("package:${activity.packageName}")
+            }
+            activity.startActivityForResult(intent, 1)
+            promise.resolve(false)
+          }
+        }
+        ContextCompat.checkSelfPermission(activity, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED -> {
+          promise.resolve(true)
+        }
+        else -> {
+          activity.requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1)
+          promise.resolve(false)
+        }
+      }
+    }
+
+    AsyncFunction("scanEpubFiles") { promise: Promise ->
+      val storageDir = Environment.getExternalStorageDirectory()
+      val epubFiles = mutableListOf<String>()
+
+      fun scanDirectory(directory: File) {
+        directory.listFiles()?.forEach { file ->
+          when {
+            file.isDirectory -> scanDirectory(file)
+            file.extension.equals("epub", ignoreCase = true) -> epubFiles.add(file.absolutePath)
+          }
+        }
+      }
+
+      scanDirectory(storageDir)
+      promise.resolve(epubFiles)
     }
   }
 }

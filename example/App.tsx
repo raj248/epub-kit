@@ -1,73 +1,34 @@
-import { useEvent } from 'expo';
-import EpubKit, { EpubKitView } from 'epub-kit';
-import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import * as EpubKit from 'epub-kit';
+import { useState } from 'react';
+import { Button, Text, View } from 'react-native';
 
 export default function App() {
-  const onChangePayload = useEvent(EpubKit, 'onChange');
+  const [epubFiles, setEpubFiles] = useState<string[]>([]);
+
+  const requestPermission = async () => {
+    const granted = await EpubKit.requestStoragePermission();
+    if (granted) {
+      console.log('Storage permission granted');
+      scanEpubFiles();
+    } else {
+      console.log('Storage permission denied');
+    }
+  };
+
+  const scanEpubFiles = async () => {
+    const files = await EpubKit.scanEpubFiles();
+    setEpubFiles(files);
+    console.log('EPUB files found:', files);
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.container}>
-        <Text style={styles.header}>Module API Example</Text>
-        <Group name="Constants">
-          <Text>{EpubKit.PI}</Text>
-        </Group>
-        <Group name="Functions">
-          <Text>{EpubKit.hello()}</Text>
-        </Group>
-        <Group name="Async functions">
-          <Button
-            title="Set value"
-            onPress={async () => {
-              await EpubKit.setValueAsync('Hello from JS!');
-            }}
-          />
-        </Group>
-        <Group name="Events">
-          <Text>{onChangePayload?.value}</Text>
-        </Group>
-        <Group name="Views">
-          <EpubKitView
-            url="https://www.example.com"
-            onLoad={({ nativeEvent: { url } }) => console.log(`Loaded: ${url}`)}
-            style={styles.view}
-          />
-        </Group>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function Group(props: { name: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.group}>
-      <Text style={styles.groupHeader}>{props.name}</Text>
-      {props.children}
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <Text>Theme: {EpubKit.getTheme()}</Text>
+      <Button title="Request Storage Permission" onPress={requestPermission} />
+      <Button title="Scan Epub Files" onPress={scanEpubFiles} />
+      {epubFiles.map((file, index) => (
+        <Text key={index}>{file}</Text>
+      ))}
     </View>
   );
 }
-
-const styles = {
-  header: {
-    fontSize: 30,
-    margin: 20,
-  },
-  groupHeader: {
-    fontSize: 20,
-    marginBottom: 20,
-  },
-  group: {
-    margin: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#eee',
-  },
-  view: {
-    flex: 1,
-    height: 200,
-  },
-};

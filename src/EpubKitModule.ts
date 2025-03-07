@@ -1,11 +1,11 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
-import { EpubKitModuleEvents } from './EpubKit.types';
 
-declare class EpubKitModule extends NativeModule<EpubKitModuleEvents> {
-  PI: number;
-  hello(): string;
-  setValueAsync(value: string): Promise<void>;
+declare class EpubKitModule extends NativeModule {
+  getTheme(): string;
+  requestStoragePermission();
+  scanEpubFiles();
+
 }
 
 // This call loads the native module object from the JSI.
