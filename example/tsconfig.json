@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "epub-kit": ["../src/index"],
+      "epub-kit/*": ["../src/*"]
+    }
+  }
+}
