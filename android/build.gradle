@@ -41,3 +41,8 @@ android {
     abortOnError false
   }
 }
+
+
+dependencies {
+    implementation 'com.github.mertakdut:EpubParser:1.0.95'
+}

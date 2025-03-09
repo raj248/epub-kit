@@ -5,6 +5,7 @@ declare class EpubKitModule extends NativeModule {
   getTheme(): string;
   requestStoragePermission();
   scanEpubFiles();
+  extractMetadata(filePath:string): Promise<any>
 
 }
 
